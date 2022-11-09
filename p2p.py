@@ -1,4 +1,4 @@
-import socket, errno
+import socket, threading
 
 PORT = 5050
 SERVER = "localhost"
@@ -8,51 +8,57 @@ DISCONNECT_MESSAGE = "!DISCONNECT"
 
 node = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-def start():
+def portUsed():
     portUsed = False
     try:
         node.bind(ADDR)
-    except socket.error as err:
+    except socket.error:
         portUsed = True
-        if err.errno == errno.EADDRINUSE:
-            print("[CONNECTED]")
-        else:
-            print("[ERROR]")
     
     return portUsed
 
-def handle_node(conn, addr):
-    try: # try ignores exceptions
-        connected = True
-        while connected:
-            msg = conn.recv(1024).decode(FORMAT) # 1024 is the length of the message
-            if not msg: # If message is empty, disconnect the node
-                break
+def receiveFromPeer(node, addr):
+    connected = True
+    while connected:
+        msg = node.recv(1024).decode(FORMAT) # 1024 is the length of the message
+        if not msg: # If message is empty, disconnect the client
+            break
 
-            if msg == DISCONNECT_MESSAGE:
-                connected = False
+        if msg == DISCONNECT_MESSAGE:
+            connected = False
 
-            print(f"[{addr}] says: {msg}")
-            
-    finally:
-        conn.close()
+        print(f"\n[{addr}] {msg}")
+    
+    print(f"[DISCONNECTION] {addr}")
+    node.close()
 
+def sendToPeer(conn, addr):
+    connected = True
+    while connected:
+        try:
+            msg = input("Send message: ")
+            conn.send(msg.encode(FORMAT))
+        except:
+            connected = False
+    print(f"[ERROR] {addr} disconnected")
+    
 def main():
-    portUsed = start()
-    if portUsed: # There's already a node using the port
+    if not portUsed():
+        print("[LISTENING]")
+        node.listen() # Start listening on the address ADDR
+        conn, addr = node.accept() # conn is a socket, addr is the ip address and the port of client
+        print(f"[NEW CONNECTION] {addr} Connected")
+        receiveMsg = threading.Thread(target=receiveFromPeer, args=(conn, addr)) 
+        receiveMsg.start()
+        sendMsg = threading.Thread(target=sendToPeer, args=(conn, addr)) 
+        sendMsg.start()
+    
+    else:
         node.connect(ADDR)
-        while True:
-            handle_node(conn, ADDR) #aggiusta, non è conn
-            msg = input("Send message: ")
-            node.send(msg.encode(FORMAT))
-
-    if not portUsed:
-        print("[STARTING THE CONNECTION]")
-        node.listen()
-        conn, addr = node.accept()
-        while True:
-            handle_node(conn, addr)
-            msg = input("Send message: ")
-            node.send(msg.encode(FORMAT))
+        print(f"[CONNECTED] {ADDR}")
+        receiveMsg = threading.Thread(target=receiveFromPeer, args=(node, ADDR)) 
+        receiveMsg.start()
+        sendMsg = threading.Thread(target=sendToPeer, args=(node, ADDR)) 
+        sendMsg.start()
 
 main()
