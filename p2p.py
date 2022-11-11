@@ -1,10 +1,11 @@
 import socket, threading
 
-PORT = 5050
+PORT = 41111
 SERVER = "localhost"
 ADDR = (SERVER, PORT)
 FORMAT = "utf-8"
 DISCONNECT_MESSAGE = "!DISCONNECT"
+DISCOVERY_SERVER = "localhost"
 
 node = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -43,6 +44,7 @@ def sendToPeer(conn, addr):
     print(f"[ERROR] {addr} disconnected")
     
 def main():
+    node.connect((DISCOVERY_SERVER, 5050)) # Each node of a p2p network is a client of the discovery server, i should do this frequently
     if not portUsed():
         print("[LISTENING]")
         node.listen() # Start listening on the address ADDR
@@ -61,4 +63,5 @@ def main():
         sendMsg = threading.Thread(target=sendToPeer, args=(node, ADDR)) 
         sendMsg.start()
 
-main()
+if __name__ == "__main__":
+    main()
