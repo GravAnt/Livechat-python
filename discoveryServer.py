@@ -35,7 +35,6 @@ def newNode():
 def nodeDisconnection(node, addr):
     while True:
         msg = node.recv(1024).decode(FORMAT)
-        print(msg)
         if msg == DISCONN_MESSAGE:
             print(f"[DISCONNECTION] {addr}")
             clients.remove(node)
@@ -43,13 +42,16 @@ def nodeDisconnection(node, addr):
             for c in clients: # Notifying the nodes on the disconnection
                 c.sendall(str(addrMsg).encode(FORMAT))
             break
+        elif msg in users.values():
+            for peerAddr, value in users.items():
+                if value == msg:
+                    node.sendall(str(peerAddr).encode(FORMAT))
         else:
-            continue
+            node.send("[USERNAME NOT VALID]".encode(FORMAT)) # If the username entered is not valid, the node gets its socket as a flag of error
 
 def start():
     print("[DISCOVERY SERVER STARTED]")
-    thread = threading.Thread(target=newNode)
-    thread.start()
+    newNode()
 
 
 start()
