@@ -11,6 +11,22 @@ DISCONN_MESSAGE = "!DISCONNECT"
 node = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 connected = False
 
+def startHosting(msg):
+    node.bind(node.getsockname()) 
+    node.listen()
+    while True:
+        print("WAITING")
+        peerSocket, peerAddr = node.accept()
+        if peerAddr == msg:
+            print("[CONNECTED TO THE USER]")
+        else:
+            print("[ERROR]")
+
+def connectToHost(hostAddr):
+    node.connect(eval(hostAddr))
+    print("[CONNECTED TO THE USER]")
+
+
 def getMsg():
     global connected
     while connected:
@@ -19,15 +35,18 @@ def getMsg():
             if "[NODES CONNECTED]" in msg or "[NEW DISCONNECTION]" in msg:
                 print(msg) # It prints all the users online or the username of the ones who disconnected
             else: # It means that the node got the address + port of the peer, or that someone wants to connect to the node
-                node.send(DISCONN_MESSAGE.encode(FORMAT))
-                node.close()
                 if "STARTED A CHAT]" in msg: 
-                    print(msg + "\n[PRESS ENTER TO CONTINUE]]")
+                    hostAddr = node.recv(1024).decode(FORMAT) # So the target node gets the address of the host
+                    node.send(DISCONN_MESSAGE.encode(FORMAT))
+                    print(msg + "\n[PRESS ENTER TO CONTINUE]")
+                    connectToHost(hostAddr)
                 else:
+                    node.send(DISCONN_MESSAGE.encode(FORMAT))
                     print("[INPUT VALID, PRESS ENTER TO CONTINUE]") # Otherwise the node could see the IP address of its peer
+                    startHosting(msg)
                 connected = False
         except socket.error:
-            node.close()
+            print("Exception")
             connected = False
 
 def setConn():
@@ -56,6 +75,8 @@ def main():
         threadTwo = threading.Thread(target=setConn)
         threadOne.start()
         threadTwo.start()
+
+
             
     except socket.error:
         print("[UNABLE TO CONNECT TO DISCOVERY SERVER]")

@@ -8,6 +8,7 @@ ADDR = (SERVER, PORT)
 FORMAT = "utf-8"
 DISCONN_MESSAGE = "!DISCONNECT"
 
+
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDR)
 
@@ -42,6 +43,7 @@ def nodeDisconnection(node, addr):
             clients.remove(node)
             sockets.pop(addr)
             addrMsg = "[NEW DISCONNECTION] " + users.pop(addr)
+            node.close()
             for c in clients: # Notifying the nodes on the disconnection
                 c.sendall(str(addrMsg).encode(FORMAT))
             break
@@ -51,8 +53,8 @@ def nodeDisconnection(node, addr):
                     node.sendall(str(peerAddr).encode(FORMAT))
                     peerSocket = sockets[peerAddr]
                     peerSocket.send(f"[{users[addr]} STARTED A CHAT]".encode(FORMAT))
+                    peerSocket.send(str(addr).encode(FORMAT))
                     print(f"[DISCONNECTION] {addr}")
-                    #node.close()
                     #clients.remove(node)
                     #sockets.pop(addr)
                     #users.pop(addr)
