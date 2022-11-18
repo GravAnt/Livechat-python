@@ -48,19 +48,19 @@ def nodeDisconnection(node, addr):
                 c.sendall(str(addrMsg).encode(FORMAT))
             break
         elif msg in users.values():
-            for peerAddr, value in users.items():
+            for clientAddr, value in users.items(): #guestAddr instead of clientAddr
                 if value == msg:
-                    node.sendall(str(peerAddr).encode(FORMAT))
-                    peerSocket = sockets[peerAddr]
-                    peerSocket.send(f"[{users[addr]} STARTED A CHAT]".encode(FORMAT))
-                    peerSocket.send(str(addr).encode(FORMAT))
+                    node.sendall(str(clientAddr).encode(FORMAT))
+                    clientSocket = sockets[clientAddr]
+                    clientSocket.send(f"[{users[addr]} STARTED A CHAT]".encode(FORMAT))
+                    clientSocket.send(str(addr).encode(FORMAT))
                     print(f"[DISCONNECTION] {addr}")
                     #clients.remove(node)
                     #sockets.pop(addr)
                     #users.pop(addr)
-                    #clients.remove(peerSocket)
-                    #sockets.pop(peerAddr)
-                    #users.pop(peerAddr)
+                    #clients.remove(clientSocket)
+                    #sockets.pop(clientAddr)
+                    #users.pop(clientAddr)
                     break
             break
         else:

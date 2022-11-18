@@ -26,6 +26,7 @@ def receiveFromPeer(node, addr):
     
     print(f"[DISCONNECTION] {addr}")
     node.close()
+    
 def sendToPeer(conn, addr):
     connected = True
     while connected:
