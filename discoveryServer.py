@@ -31,21 +31,21 @@ def newNode():
         clients.add(node)
         for c in clients:
             c.sendall(addrMsg.encode(FORMAT))
-        thread = threading.Thread(target=nodeDisconnection, args=(node, addr))
+        thread = threading.Thread(target=nodeHandling, args=(node, addr, username))
         thread.start()
         
 
-def nodeDisconnection(node, addr):
+def nodeHandling(node, addr, username):
     while True:
         msg = node.recv(1024).decode(FORMAT)
         if msg == DISCONN_MESSAGE:
             print(f"[DISCONNECTION] {addr}")
             clients.remove(node)
             sockets.pop(addr)
-            addrMsg = "[NEW DISCONNECTION] " + users.pop(addr)
+            clientDisconnection = "[NEW DISCONNECTION] " + users.pop(addr)
             node.close()
             for c in clients: # Notifying the nodes on the disconnection
-                c.sendall(str(addrMsg).encode(FORMAT))
+                c.sendall(str(clientDisconnection).encode(FORMAT))
             break
         elif msg in users.values():
             for clientAddr, value in users.items(): #guestAddr instead of clientAddr
@@ -55,6 +55,8 @@ def nodeDisconnection(node, addr):
                     clientSocket.send(f"[{users[addr]} STARTED A CHAT]".encode(FORMAT))
                     clientSocket.send(str(addr).encode(FORMAT))
                     print(f"[DISCONNECTION] {addr}")
+                    for c in clients: # Notifying the nodes on the disconnection
+                        c.sendall(f"[NEW DISCONNECTION] {username}".encode(FORMAT))
                     #clients.remove(node)
                     #sockets.pop(addr)
                     #users.pop(addr)

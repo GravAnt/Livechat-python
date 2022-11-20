@@ -1,7 +1,6 @@
 import socket
 import threading
 import time
-import p2p
 DISCOV_SERVER = "localhost"
 DISCOV_PORT = 5050
 DISCOV_ADDR = (DISCOV_SERVER, DISCOV_PORT)
@@ -17,23 +16,23 @@ guestAddr = None
 peerUsername = None
 
 
-def receiveFromPeer(guestSocket, addr):
+def receiveFromPeer(sock, addr):
     while True:
-        msg = guestSocket.recv(1024).decode(FORMAT) # 1024 is the length of the message
+        msg = sock.recv(1024).decode(FORMAT) # 1024 is the length of the message
         if not msg: # If message is empty, disconnect the client
             break
         if msg == DISCONN_MESSAGE:
             break
         print(peerUsername + ": " + msg)
     
-    print(peerUsername + " disconnected")
+    print("\n" + peerUsername + " disconnected")
 
 
-def sendToPeer():
+def sendToPeer(sock, addr):
     while True:
         try:
-            msg = input("Send message: ")
-            node.send(msg.encode(FORMAT))
+            msg = input()
+            sock.send(msg.encode(FORMAT))
             if msg == DISCONN_MESSAGE:
                 break
         except:
@@ -64,13 +63,15 @@ def getMsg():
     while connectedToServer:
         try:
             msg = node.recv(1024).decode(FORMAT)
-            if "[NODES CONNECTED]" in msg or "[NEW DISCONNECTION]" in msg:
+            if "[NODES CONNECTED]" in msg or "[NEW DISCONNECTION]" in msg or "[USERNAME NOT VALID]" in msg:
                 print(msg) # It prints all the users online or the username of the ones who disconnected
             else: # It means that the node got the address + port of the peer, or that someone wants to connect to the node
                 if "STARTED A CHAT]" in msg: 
                     print(msg) 
-                    peerUsername = msg[:msg.index("[")]
+                    peerUsername = msg[:msg.index(" STARTED")]
+                    peerUsername = peerUsername[1:]
                     hostAddr = node.recv(1024).decode(FORMAT) # So the target node gets the address of the host
+                    time.sleep(0.5)
                     node.send(DISCONN_MESSAGE.encode(FORMAT))
                 else:
                     node.send(DISCONN_MESSAGE.encode(FORMAT))
@@ -89,10 +90,12 @@ def setConn():
     while connectedToServer:
         try:
             if connectedToServer: # In order to avoid the displaying of the input message after the disconnection from the server
-                peerUsername = input("[INPUT] ")
-            node.send(peerUsername.encode(FORMAT))
-            if peerUsername == DISCONN_MESSAGE:
-                connectedToServer = False
+                str = input("[INPUT] ")
+                node.send(str.encode(FORMAT))
+                if str != "":
+                    peerUsername = str
+                if str == DISCONN_MESSAGE:
+                    connectedToServer = False
         except socket.error:
             connectedToServer = False
 
@@ -110,6 +113,7 @@ def main():
         getMsgThread = threading.Thread(target=getMsg)
         setConnThread = threading.Thread(target=setConn)
         getMsgThread.start()
+        time.sleep(1)
         setConnThread.start()
         
         while True:
@@ -126,11 +130,13 @@ def main():
             node = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
             node.bind(myAddr)
             if isHost:
-                guestSocket, addr = startHosting(guestAddr)
+                sock, addr = startHosting(guestAddr) # Server uses the connected node's socket to send/receive messages to/from client
             else:
                 connectToHost(hostAddr)
-            receiveFromPeerThread = threading.Thread(target=receiveFromPeer, args=(guestSocket, addr))
-            sendToPeerThread = threading.Thread(target=sendToPeer)
+                sock = node # Client uses its socket to send/receive messages to/from server
+                addr = hostAddr
+            receiveFromPeerThread = threading.Thread(target=receiveFromPeer, args=(sock, addr))
+            sendToPeerThread = threading.Thread(target=sendToPeer, args=(sock, addr))
             receiveFromPeerThread.start()
             sendToPeerThread.start()
             
