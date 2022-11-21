@@ -9,6 +9,7 @@ DISCONN_MESSAGE = "!DISCONNECT"
 
 node = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 connectedToServer = False
+connectedToPeer = False
 peersConnRequest = False
 isHost = False
 hostAddr = None
@@ -17,35 +18,41 @@ peerUsername = None
 
 
 def receiveFromPeer(sock, addr):
-    while True:
+    global connectedToPeer
+    while connectedToPeer:
         msg = sock.recv(1024).decode(FORMAT) # 1024 is the length of the message
-        if not msg: # If message is empty, disconnect the client
-            break
-        if msg == DISCONN_MESSAGE:
-            break
-        print(peerUsername + ": " + msg)
-    
+        if not msg: # If message is empty, disconnect the peer
+            connectedToPeer = False
+        elif msg == DISCONN_MESSAGE:
+            sock.send(DISCONN_MESSAGE.encode(FORMAT)) # To synchronize the disconnection between two nodes
+            connectedToPeer = False
+        if connectedToPeer:
+            print(peerUsername + ": " + msg)
+
     print("\n" + peerUsername + " disconnected")
 
 
 def sendToPeer(sock, addr):
-    while True:
+    global connectedToPeer
+    while connectedToPeer:
         try:
             msg = input()
             sock.send(msg.encode(FORMAT))
             if msg == DISCONN_MESSAGE:
-                break
+                connectedToPeer = False
         except:
-            break
+            connectedToPeer = False
 
     print("Disconnected")
 
 
 def startHosting(guestAddr):
+    global connectedToPeer
     node.listen()
     guestSocket, guestAddr = node.accept()
     if guestAddr == guestAddr:
         print("[CONNECTED TO THE USER]")
+        connectedToPeer = True
     else:
         print("[ERROR]")
 
@@ -53,8 +60,13 @@ def startHosting(guestAddr):
 
 
 def connectToHost(hostAddr):
-    node.connect(eval(hostAddr))
-    print("[CONNECTED TO THE USER]")
+    global connectedToPeer
+    try:
+        node.connect(eval(hostAddr))
+        print("[CONNECTED TO THE USER]")
+        connectedToPeer = True
+    except socket.error:
+        print("[ERROR]")
 
 
 def getMsg():
@@ -101,47 +113,62 @@ def setConn():
 
 
 def main():
-    global node, connectedToServer
+    global node, connectedToServer, peersConnRequest
     try: 
         username = input("[ENTER YOUR USERNAME] ")
-        node.connect(DISCOV_ADDR)
-        node.send(username.encode(FORMAT))
-        print("[CONNECTED TO THE DISCOVERY SERVER]")
-        print("[WHEN ASKED FOR AN INPUT, ENTER THE NAME OF A USER TO CHAT WITH]")
-        print(f"[ENTER {DISCONN_MESSAGE} TO LEAVE THE SERVER]\n")
-        connectedToServer = True
-        getMsgThread = threading.Thread(target=getMsg)
-        setConnThread = threading.Thread(target=setConn)
-        getMsgThread.start()
-        time.sleep(1)
-        setConnThread.start()
-        
-        while True:
-            if not connectedToServer and peersConnRequest:
-                print("[ATTEMPTING TO CONNECT TO THE NODE]")
-                break
-            elif not connectedToServer and not peersConnRequest:
-                print("[GOODBYE]")
-                break
+        mainLoop = True
+        while mainLoop:
+            node.connect(DISCOV_ADDR)
+            node.send(username.encode(FORMAT))
+            print("[CONNECTED TO THE DISCOVERY SERVER]")
+            print("[WHEN ASKED FOR AN INPUT, ENTER THE NAME OF A USER TO CHAT WITH]")
+            print(f"[ENTER {DISCONN_MESSAGE} TO LEAVE THE SERVER]\n")
+            connectedToServer = True
+            getMsgThread = threading.Thread(target=getMsg)
+            setConnThread = threading.Thread(target=setConn)
+            getMsgThread.start()
+            time.sleep(1)
+            setConnThread.start()
+            
+            while True:
+                if not connectedToServer and peersConnRequest:
+                    print("[ATTEMPTING TO CONNECT TO THE NODE]")
+                    break
+                elif not connectedToServer and not peersConnRequest:
+                    print("[GOODBYE]")
+                    break
 
-        if peersConnRequest:
-            myAddr = node.getsockname()
-            node.close()
-            node = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-            node.bind(myAddr)
+            if peersConnRequest:
+                myAddr = node.getsockname()
+                node.close()
+                node = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                #node.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
+                node.bind(myAddr)
+                if isHost:
+                    sock, addr = startHosting(guestAddr) # Server uses the connected node's socket to send/receive messages to/from client
+                else:
+                    connectToHost(hostAddr)
+                    sock = node # Client uses its socket to send/receive messages to/from server
+                    addr = hostAddr
+                receiveFromPeerThread = threading.Thread(target=receiveFromPeer, args=(sock, addr))
+                sendToPeerThread = threading.Thread(target=sendToPeer, args=(sock, addr))
+                receiveFromPeerThread.start()
+                sendToPeerThread.start()
+
+            while connectedToPeer: # Waiting until the chat ends
+                continue
+            
+            peersConnRequest = False
             if isHost:
-                sock, addr = startHosting(guestAddr) # Server uses the connected node's socket to send/receive messages to/from client
+                node.close()
+            mainLoop = input("\nPress 1 if you want to reconnect to the discovery server: ")
+            if mainLoop:
+                node = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
             else:
-                connectToHost(hostAddr)
-                sock = node # Client uses its socket to send/receive messages to/from server
-                addr = hostAddr
-            receiveFromPeerThread = threading.Thread(target=receiveFromPeer, args=(sock, addr))
-            sendToPeerThread = threading.Thread(target=sendToPeer, args=(sock, addr))
-            receiveFromPeerThread.start()
-            sendToPeerThread.start()
+                print("Goodbye!")
             
     except socket.error:
-        print("[UNABLE TO CONNECT TO THE DISCOVERY SERVER]")
+        print(socket.error)
 
 
 if __name__ == "__main__":
