@@ -114,16 +114,22 @@ def setConn():
 
 def main():
     global node, connectedToServer, peersConnRequest
-    try: 
-        username = input("[ENTER YOUR USERNAME] ")
-        password = input("[ENTER YOUR PASSWORD] ")
+    try:
+        signIn = input("[ENTER 1 TO SIGN IN, ANY OTHER KEY TO LOGIN] ") 
+        username = input("[ENTER USERNAME] ")
+        password = input("[ENTER PASSWORD] ")
         accountData = username + "|" + password
         mainLoop = True
         while mainLoop:
             node.connect(DISCOV_ADDR)
+            if signIn == '1':
+                node.send("SIGNIN".encode(FORMAT))
+            else:
+                node.send("LOGIN".encode(FORMAT))
+            time.sleep(0.5)
             node.send(accountData.encode(FORMAT))
             auth = node.recv(1024).decode(FORMAT)
-            if auth == "YES":
+            if auth == "YES_AUTH":
                 print("[CONNECTED TO THE DISCOVERY SERVER]")
                 print("[WHEN ASKED FOR AN INPUT, ENTER THE NAME OF A USER TO CHAT WITH]")
                 print(f"[ENTER {DISCONN_MESSAGE} TO LEAVE THE SERVER]\n")

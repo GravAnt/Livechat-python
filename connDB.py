@@ -7,7 +7,7 @@ DB_PASS = "admin"
 
 conn = psycopg2.connect(dbname = DB_NAME, user = DB_USER, password = DB_PASS, host = DB_HOST)
 cur = conn.cursor()
-users = list()
+usersList = list()
 
 class User:
     def __init__(self, name, code, password, reports):
@@ -30,7 +30,7 @@ class User:
     
 
 def loadUsers():
-    global users
+    global usersList
     cur.execute("SELECT COUNT(*) FROM client")
     numPeople = str(cur.fetchone())
     numPeople = int(numPeople[1:len(numPeople)-2])
@@ -47,7 +47,23 @@ def loadUsers():
         comm = "SELECT reports FROM client WHERE code = " + str(i)
         cur.execute(comm)
         reports = str(cur.fetchone())
-        reports = int(reports[1:-2])
-        users.append(User(username, i, password, reports))
+        try:
+            reports = int(reports[1:-2])
+        except:
+            reports = 0
+        usersList.append(User(username, i, password, reports))
 
-    return users
+    return usersList, numPeople
+
+
+def insertUsers(username, password):
+    global usersList
+    usersList, numPeople = loadUsers()
+    cur.execute(f"INSERT INTO client (username, code, password) VALUES ('{username}', {numPeople}, '{password}');")
+    conn.commit()
+    usersList.append(User(username, numPeople, password, 0))
+    loadUsers()
+
+
+def closeConn():
+    conn.close()

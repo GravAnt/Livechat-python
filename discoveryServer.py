@@ -2,47 +2,64 @@ import time
 import socket
 import threading
 import account
+import connDB
 
 PORT = 5050
 SERVER = "localhost"
 ADDR = (SERVER, PORT)
 FORMAT = "utf-8"
 DISCONN_MESSAGE = "!DISCONNECT"
+SHUT_COUNTDOWN = 100
 
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDR)
 
+serverRunning = True
 clients = set() # To keep track of all the clients connected
 sockets = dict() # To associate each address to socket
 users = dict() # To associate each address to username
 
+newAccounts = list() # Due to a bug, a new account cannot reconnect to the discovery server unless the server restarts,
+# so the list newAccounts keeps track of all the new users and to make the server allow the reconnection
+
 
 def newNode():
     server.listen()
-    while True: 
-        node, addr = server.accept()
-        accountData = node.recv(1024).decode(FORMAT)
-        separatorIndex = accountData.index("|")
-        username = accountData[:separatorIndex]
-        password = accountData[separatorIndex+1:]
-        if account.login(username, password):
-            node.send("YES".encode(FORMAT))
-            users[addr] = username
-            sockets[addr] = node
-            nodesConnected = "\n[NODES CONNECTED]"
-            for clientAddr, clientUsername in users.items():
-                nodesConnected += "\n" + clientUsername
-            print(f"[NEW CONNECTION] {addr}: {username}")
-            time.sleep(0.5) # Waiting so that the connected node can receive the message as well
-            clients.add(node)
-            for c in clients:
-                c.sendall(nodesConnected.encode(FORMAT))
-            nodeHandlingThread = threading.Thread(target=nodeHandling, args=(node, addr, username))
-            nodeHandlingThread.start()
-        else:
-            node.send("NO".encode(FORMAT))
-            print(f"[AUTH ERROR] {addr}")
+    while serverRunning:
+        try:
+            node, addr = server.accept()
+            signOrLog = node.recv(1024).decode(FORMAT)
+            time.sleep(0.5)
+            accountData = node.recv(1024).decode(FORMAT)
+            separatorIndex = accountData.index("|")
+            username = accountData[:separatorIndex]
+            password = accountData[separatorIndex+1:]
+            validUsername = False
+            if signOrLog == "SIGNIN":
+                validUsername = account.signIn(username, password)
+            if validUsername:
+                newAccounts.append(username)   
+            if account.login(username, password) or username in newAccounts:
+                node.send("YES_AUTH".encode(FORMAT))
+                users[addr] = username
+                sockets[addr] = node
+                nodesConnected = "\n[NODES CONNECTED]"
+                for clientAddr, clientUsername in users.items():
+                    nodesConnected += "\n" + clientUsername
+                print(f"[NEW CONNECTION] {addr}: {username}")
+                time.sleep(0.5) # Waiting so that the connected node can receive the message as well
+                clients.add(node)
+                for c in clients:
+                    c.sendall(nodesConnected.encode(FORMAT))
+                nodeHandlingThread = threading.Thread(target=nodeHandling, args=(node, addr, username))
+                nodeHandlingThread.start()
+            else:
+                node.send("NO_AUTH".encode(FORMAT))
+                print(f"[AUTH ERROR] {addr}")
+
+        except socket.error: # Expection occurrs after the shutdown of the server
+            print("[SERVER CLOSED]")
      
 
 def nodeDisconnection(node, addr, username):
@@ -56,7 +73,7 @@ def nodeDisconnection(node, addr, username):
 
 
 def nodeHandling(node, addr, username):
-    while True:
+    while serverRunning:
         try:
             msg = node.recv(1024).decode(FORMAT)
             if msg == DISCONN_MESSAGE:
@@ -85,10 +102,22 @@ def nodeHandling(node, addr, username):
             break
 
 
+def serverShutdown():
+    global serverRunning
+    while serverRunning:
+        time.sleep(SHUT_COUNTDOWN)
+        if len(clients) == 0:
+            connDB.closeConn()
+            server.close()
+            serverRunning = False
 
-def start():
+
+def main():
     print("[DISCOVERY SERVER STARTED]")
-    newNode()
+    newNodeThread = threading.Thread(target=newNode)
+    newNodeThread.start()
+    serverShutdown()
 
 
-start()
+if __name__ == "__main__":
+    main()

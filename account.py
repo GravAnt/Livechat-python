@@ -1,15 +1,16 @@
 import connDB
+import bcrypt
 
 def login(username, password):
-    users = connDB.loadUsers()
+    usersList, numPeople = connDB.loadUsers()
     usernameFound = False
     passwordFound = False
-    for i in range(len(users)):
-        if username == users[i].getName():
+    for i in range(numPeople):
+        if username == usersList[i].getName():
             usernameFound = True
             break
-    for i in range(len(users)):
-        if password == users[i].getPassword():
+    for i in range(numPeople):
+        if password == usersList[i].getPassword():
             passwordFound = True
             break
     if usernameFound and passwordFound:
@@ -17,4 +18,14 @@ def login(username, password):
     else:
         return False
 
-# def signin():
+def signIn(username, password):
+    validUsername = True
+    usersList, numPeople = connDB.loadUsers()
+    for i in range(numPeople):
+        if username == usersList[i].getName():
+            validUsername = False
+            break
+    if validUsername:
+        connDB.insertUsers(username, password)
+
+    return validUsername
