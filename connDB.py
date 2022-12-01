@@ -40,7 +40,7 @@ def loadUsers():
         cur.execute(comm)
         username = str(cur.fetchone())
         username = username[2:-3]
-        password = "SELECT password FROM client WHERE code = " + str(i)
+        comm = "SELECT password FROM client WHERE code = " + str(i)
         cur.execute(comm)
         password = str(cur.fetchone())
         password = password[2: -3]
