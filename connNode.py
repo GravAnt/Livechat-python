@@ -115,15 +115,15 @@ def setConn():
 def main():
     global node, connectedToServer, peersConnRequest
     try:
-        signIn = input("[ENTER 1 TO SIGN IN, ANY OTHER KEY TO LOGIN] ") 
+        signUp = input("[ENTER 1 TO SIGN UP, ANY OTHER KEY TO LOGIN] ") 
         username = input("[ENTER USERNAME] ")
         password = input("[ENTER PASSWORD] ")
         accountData = username + "|" + password
         mainLoop = True
         while mainLoop:
             node.connect(DISCOV_ADDR)
-            if signIn == '1':
-                node.send("SIGNIN".encode(FORMAT))
+            if signUp == '1':
+                node.send("SIGNUP".encode(FORMAT))
             else:
                 node.send("LOGIN".encode(FORMAT))
             time.sleep(0.5)

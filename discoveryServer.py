@@ -20,8 +20,8 @@ clients = set() # To keep track of all the clients connected
 sockets = dict() # To associate each address to socket
 users = dict() # To associate each address to username
 
-newAccounts = list() # Due to a bug, a new account cannot reconnect to the discovery server unless the server restarts,
-# so the list newAccounts keeps track of all the new users and to make the server allow the reconnection
+newAccounts = dict() # Due to a bug, a new account cannot reconnect to the discovery server unless the server restarts,
+# so newAccounts keeps track of all the new users and to make the server allow the reconnection
 
 
 def newNode():
@@ -36,11 +36,11 @@ def newNode():
             username = accountData[:separatorIndex]
             password = accountData[separatorIndex+1:]
             validUsername = False
-            if signOrLog == "SIGNIN":
-                validUsername = account.signIn(username, password)
+            if signOrLog == "SIGNUP":
+                validUsername = account.signUp(username, password)
             if validUsername:
-                newAccounts.append(username)   
-            if account.login(username, password) or username in newAccounts:
+                newAccounts[username] = password  
+            if account.login(username, password) or newAccounts[username] == password:
                 node.send("YES_AUTH".encode(FORMAT))
                 users[addr] = username
                 sockets[addr] = node

@@ -18,7 +18,7 @@ def login(username, password):
     else:
         return False
 
-def signIn(username, password):
+def signUp(username, password):
     validUsername = True
     usersList, numPeople = connDB.loadUsers()
     for i in range(numPeople):
