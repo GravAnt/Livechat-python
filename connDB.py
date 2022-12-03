@@ -65,5 +65,10 @@ def insertUsers(username, password):
     loadUsers()
 
 
+def newReport(msg):
+    userReported = msg[msg.index(" ")+1:]
+    cur.execute(f"UPDATE client SET reports = reports + 1 WHERE username = '{userReported}';")    
+
+
 def closeConn():
     conn.close()

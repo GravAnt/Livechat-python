@@ -1,6 +1,9 @@
 import connDB
 import bcrypt
 
+FORMAT = 'utf-8'
+
+
 def login(username, password):
     usersList, numPeople = connDB.loadUsers()
     usernameFound = False
@@ -10,13 +13,14 @@ def login(username, password):
             usernameFound = True
             break
     for i in range(numPeople):
-        if password == usersList[i].getPassword():
+        if bcrypt.checkpw(password.encode(FORMAT), usersList[i].getPassword().encode(FORMAT)):
             passwordFound = True
             break
     if usernameFound and passwordFound:
         return True
     else:
         return False
+
 
 def signUp(username, password):
     validUsername = True

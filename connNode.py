@@ -6,6 +6,7 @@ DISCOV_PORT = 5050
 DISCOV_ADDR = (DISCOV_SERVER, DISCOV_PORT)
 FORMAT = "utf-8"
 DISCONN_MESSAGE = "!DISCONNECT"
+REPORT_MESSAGE = "!REPORT"
 
 node = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 connectedToServer = False
@@ -132,6 +133,7 @@ def main():
             if auth == "YES_AUTH":
                 print("[CONNECTED TO THE DISCOVERY SERVER]")
                 print("[WHEN ASKED FOR AN INPUT, ENTER THE NAME OF A USER TO CHAT WITH]")
+                print(f"[YOU CAN REPORT ANY USER USING '{REPORT_MESSAGE} *username*']")
                 print(f"[ENTER {DISCONN_MESSAGE} TO LEAVE THE SERVER]\n")
                 connectedToServer = True
                 getMsgThread = threading.Thread(target=getMsg)

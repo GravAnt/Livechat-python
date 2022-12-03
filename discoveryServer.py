@@ -3,12 +3,14 @@ import socket
 import threading
 import account
 import connDB
+import bcrypt
 
 PORT = 5050
 SERVER = "localhost"
 ADDR = (SERVER, PORT)
 FORMAT = "utf-8"
 DISCONN_MESSAGE = "!DISCONNECT"
+REPORT_MESSAGE = "!REPORT"
 SHUT_COUNTDOWN = 100
 
 
@@ -25,6 +27,7 @@ newAccounts = dict() # Due to a bug, a new account cannot reconnect to the disco
 
 
 def newNode():
+    global newAccounts
     server.listen()
     while serverRunning:
         try:
@@ -37,10 +40,16 @@ def newNode():
             password = accountData[separatorIndex+1:]
             validUsername = False
             if signOrLog == "SIGNUP":
+                passwordCopy = password
+                password = bcrypt.hashpw(password.encode(FORMAT), bcrypt.gensalt()).decode(FORMAT)
                 validUsername = account.signUp(username, password)
-            if validUsername:
-                newAccounts[username] = password  
-            if account.login(username, password) or newAccounts[username] == password:
+                if validUsername:
+                    newAccounts[username] = passwordCopy
+            newUser = False
+            if username in newAccounts.keys():
+                if passwordCopy == newAccounts[username]:
+                    newUser = True
+            if account.login(username, password) or newUser:
                 node.send("YES_AUTH".encode(FORMAT))
                 users[addr] = username
                 sockets[addr] = node
@@ -72,6 +81,9 @@ def nodeDisconnection(node, addr, username):
         c.sendall(str(clientDisconnection).encode(FORMAT))
 
 
+
+
+
 def nodeHandling(node, addr, username):
     while serverRunning:
         try:
@@ -79,6 +91,8 @@ def nodeHandling(node, addr, username):
             if msg == DISCONN_MESSAGE:
                 nodeDisconnection(node, addr, username)
                 break
+            elif REPORT_MESSAGE in msg:
+                connDB.newReport(msg)
             elif msg in users.values() and msg != username: # A node cannot chat with itself
                 for guestAddr, guestUsername in users.items():
                     if guestUsername == msg:
