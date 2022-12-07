@@ -27,6 +27,9 @@ class User:
 
     def getReports(self):
         return self.reports
+
+    def setReports(self, reports):
+        self.reports = reports
     
 
 def loadUsers():
@@ -65,9 +68,17 @@ def insertUsers(username, password):
     loadUsers()
 
 
-def newReport(msg):
-    userReported = msg[msg.index(" ")+1:]
-    cur.execute(f"UPDATE client SET reports = reports + 1 WHERE username = '{userReported}';")    
+def newReport(userReported):
+    global usersList
+    cur.execute(f"UPDATE client SET reports = reports + 1 WHERE username = '{userReported}';")
+    conn.commit()
+    cur.execute(f"SELECT code FROM client WHERE username = '{userReported}';")
+    userCode = str(cur.fetchone())
+    userCode = int(userCode[1:-2])
+    totalReports = usersList[userCode].getReports() + 1
+    usersList[userCode].setReports(totalReports)
+    
+    return totalReports
 
 
 def closeConn():

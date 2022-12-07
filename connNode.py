@@ -17,6 +17,8 @@ hostAddr = None
 guestAddr = None
 peerUsername = None
 
+serverMessages = ["NODES CONNECTED", "NEW DISCONNECTION", "USERNAME NOT VALID", "BANNED"]
+
 
 def receiveFromPeer(sock, addr):
     global connectedToPeer
@@ -76,22 +78,34 @@ def getMsg():
     while connectedToServer:
         try:
             msg = node.recv(1024).decode(FORMAT)
-            if "[NODES CONNECTED]" in msg or "[NEW DISCONNECTION]" in msg or "[USERNAME NOT VALID]" in msg:
+            nodeDisconnection = True
+            for i in range(len(serverMessages)):
+                if serverMessages[i] in msg:
+                    nodeDisconnection = False
+                    break
+            if not nodeDisconnection:
                 print(msg) # It prints all the users online or the username of the ones who disconnected
             else: # It means that the node got the address + port of the peer, or that someone wants to connect to the node
-                if "STARTED A CHAT]" in msg: 
+                if "STARTED A CHAT" in msg: 
                     print(msg) 
                     peerUsername = msg[:msg.index(" STARTED")]
                     peerUsername = peerUsername[1:]
                     hostAddr = node.recv(1024).decode(FORMAT) # So the target node gets the address of the host
                     time.sleep(0.5)
                     node.send(DISCONN_MESSAGE.encode(FORMAT))
+                    connectedToServer = False
+                    peersConnRequest = True
+                elif "BAN_MSG" in msg:
+                    node.close()
+                    print("[YOU CAN NO LONGER USE YOUR ACCOUNT]")
+                    connectedToServer = False
                 else:
                     node.send(DISCONN_MESSAGE.encode(FORMAT))
                     isHost = True
                     clientAddr = msg
-                connectedToServer = False
-                peersConnRequest = True
+                    connectedToServer = False
+                    peersConnRequest = True
+                
         except socket.error:
             print("Exception")
             connectedToServer = False
@@ -178,8 +192,6 @@ def main():
                 peersConnRequest = False
                 if mainLoop:
                     node = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-                else:
-                    print("Goodbye!")
             else:
                 print("[WRONG CREDENTIALS]")
                 node.close()

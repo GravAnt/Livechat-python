@@ -11,12 +11,11 @@ def login(username, password):
     for i in range(numPeople):
         if username == usersList[i].getName():
             usernameFound = True
+            reports = usersList[i].getReports()
+            if bcrypt.checkpw(password.encode(FORMAT), usersList[i].getPassword().encode(FORMAT)):
+                passwordFound = True
             break
-    for i in range(numPeople):
-        if bcrypt.checkpw(password.encode(FORMAT), usersList[i].getPassword().encode(FORMAT)):
-            passwordFound = True
-            break
-    if usernameFound and passwordFound:
+    if usernameFound and passwordFound and reports < 3:
         return True
     else:
         return False

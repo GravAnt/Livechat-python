@@ -11,6 +11,7 @@ ADDR = (SERVER, PORT)
 FORMAT = "utf-8"
 DISCONN_MESSAGE = "!DISCONNECT"
 REPORT_MESSAGE = "!REPORT"
+MAX_REPORTS = 3
 SHUT_COUNTDOWN = 100
 
 
@@ -31,6 +32,7 @@ def newNode():
     server.listen()
     while serverRunning:
         try:
+            newUser = False
             node, addr = server.accept()
             signOrLog = node.recv(1024).decode(FORMAT)
             time.sleep(0.5)
@@ -40,15 +42,14 @@ def newNode():
             password = accountData[separatorIndex+1:]
             validUsername = False
             if signOrLog == "SIGNUP":
+                newUser = True
                 passwordCopy = password
                 password = bcrypt.hashpw(password.encode(FORMAT), bcrypt.gensalt()).decode(FORMAT)
                 validUsername = account.signUp(username, password)
                 if validUsername:
                     newAccounts[username] = passwordCopy
-            newUser = False
-            if username in newAccounts.keys():
-                if passwordCopy == newAccounts[username]:
-                    newUser = True
+            if username in newAccounts.keys() and password == newAccounts[username]:
+                newUser = True
             if account.login(username, password) or newUser:
                 node.send("YES_AUTH".encode(FORMAT))
                 users[addr] = username
@@ -81,7 +82,15 @@ def nodeDisconnection(node, addr, username):
         c.sendall(str(clientDisconnection).encode(FORMAT))
 
 
-
+def userBan(userReported):
+    for address, username in users.items():
+        if userReported == username:
+            node = sockets[address]
+            node.send("BAN_MSG".encode(FORMAT))
+            print(f"[NEW BAN] {address}")
+            for c in clients:
+                    c.sendall(f"[{userReported} BANNED]".encode(FORMAT))
+            break
 
 
 def nodeHandling(node, addr, username):
@@ -92,7 +101,10 @@ def nodeHandling(node, addr, username):
                 nodeDisconnection(node, addr, username)
                 break
             elif REPORT_MESSAGE in msg:
-                connDB.newReport(msg)
+                userReported = msg[msg.index(" ")+1:]
+                totalReports = connDB.newReport(userReported)
+                if totalReports == MAX_REPORTS:
+                    userBan(userReported)
             elif msg in users.values() and msg != username: # A node cannot chat with itself
                 for guestAddr, guestUsername in users.items():
                     if guestUsername == msg:
