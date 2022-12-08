@@ -1,12 +1,14 @@
 import socket
 import threading
 import time
+import os
 DISCOV_SERVER = "localhost"
 DISCOV_PORT = 5050
 DISCOV_ADDR = (DISCOV_SERVER, DISCOV_PORT)
 FORMAT = "utf-8"
 DISCONN_MESSAGE = "!DISCONNECT"
 REPORT_MESSAGE = "!REPORT"
+SEND_FILE_MESSAGE = "!FILE"
 
 node = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 connectedToServer = False
@@ -22,14 +24,33 @@ serverMessages = ["NODES CONNECTED", "NEW DISCONNECTION", "USERNAME NOT VALID", 
 
 def receiveFromPeer(sock, addr):
     global connectedToPeer
+    #data = sock.recv(1024).decode('utf-8')
+    #f = open("C:/Users/anton/Desktop/myfile.txt", "w")
+    #f.write(data)
+    #f.close()
     while connectedToPeer:
-        msg = sock.recv(1024).decode(FORMAT) # 1024 is the length of the message
+        try:
+            msg = sock.recv(300000).decode(FORMAT) # 1024 is the length of the message
+        except:
+            msg = sock.recv(300000)
         if not msg: # If message is empty, disconnect the peer
             connectedToPeer = False
+        elif SEND_FILE_MESSAGE in msg:
+            data = sock.recv(300000)
+            print(f"[{peerUsername} WANTS TO SEND YOU A FILE]")
+            filename = input("[INSERT FILE NAME] ")
+            path = input("[INSERT A VALID PATH] ")
+            try:
+                myfile = open(f"{path}/{filename}", "wb")
+                myfile.write(data)
+                myfile.close()
+                print("[FILE DOWNLOADED]")
+            except:
+                print("[INVALID PATH]")
         elif msg == DISCONN_MESSAGE:
             sock.send(DISCONN_MESSAGE.encode(FORMAT)) # To synchronize the disconnection between two nodes
             connectedToPeer = False
-        if connectedToPeer:
+        else:
             print(peerUsername + ": " + msg)
 
     print("\n" + peerUsername + " disconnected")
@@ -37,11 +58,23 @@ def receiveFromPeer(sock, addr):
 
 def sendToPeer(sock, addr):
     global connectedToPeer
+    #myfile = open("prova.txt", "rb")
+    #sock.send(myfile.read())
     while connectedToPeer:
         try:
             msg = input()
             sock.send(msg.encode(FORMAT))
-            if msg == DISCONN_MESSAGE:
+            if SEND_FILE_MESSAGE in msg:
+                path = msg[msg.index(" ")+1:] # " " works as separator
+                print(path)
+                try:
+                    myfile = open(path, "rb")
+                    sock.send(myfile.read())
+                    myfile.close()
+                    print("FILE SENT")
+                except:
+                    print("[PATH NOT VALID]")
+            elif msg == DISCONN_MESSAGE:
                 connectedToPeer = False
         except:
             connectedToPeer = False
@@ -50,6 +83,7 @@ def sendToPeer(sock, addr):
 
 
 def startHosting(guestAddr):
+    #metti messaggi introduttivi tipo 'tu sei l'host' e i vari messaggi per la disconnessione e per l'invio di file
     global connectedToPeer
     node.listen()
     guestSocket, guestAddr = node.accept()
@@ -63,6 +97,7 @@ def startHosting(guestAddr):
 
 
 def connectToHost(hostAddr):
+    #metti messaggi introduttivi tipo 'tu sei il guest' e i vari messaggi per la disconnessione e per l'invio di file
     global connectedToPeer
     try:
         node.connect(eval(hostAddr))
