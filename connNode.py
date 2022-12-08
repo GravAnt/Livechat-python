@@ -2,6 +2,7 @@ import socket
 import threading
 import time
 import os
+
 DISCOV_SERVER = "localhost"
 DISCOV_PORT = 5050
 DISCOV_ADDR = (DISCOV_SERVER, DISCOV_PORT)
@@ -9,6 +10,7 @@ FORMAT = "utf-8"
 DISCONN_MESSAGE = "!DISCONNECT"
 REPORT_MESSAGE = "!REPORT"
 SEND_FILE_MESSAGE = "!FILE"
+SEGMENT_LENGTH = 1024 # Each segment has a length of 1 KB
 
 node = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 connectedToServer = False
@@ -21,70 +23,82 @@ peerUsername = None
 
 serverMessages = ["NODES CONNECTED", "NEW DISCONNECTION", "USERNAME NOT VALID", "BANNED"]
 
+lock = threading.Lock()
+
+
+def getFile(sock):
+    #"C:/Users/anton/Desktop/myfile.txt"
+    fileDimension = int(sock.recv(SEGMENT_LENGTH).decode(FORMAT)) # Get file dimension in bytes
+    numSegments = int(fileDimension/SEGMENT_LENGTH)+1
+    print(f"[{peerUsername} WANTS TO SEND YOU A FILE]\n[PRESS ENTER TWICE TO CONTINUE]")
+    filename = input("[INSERT FILE NAME] ")
+    print("[PRESS ENTER TO CONTINUE] ")
+    path = input("[INSERT A VALID PATH] ")
+    try:
+        myfile = open(f"{path}/{filename}", "wb")
+    except:
+        print("[INVALID PATH]")
+    for i in range(numSegments):
+        data = sock.recv(SEGMENT_LENGTH)
+        myfile.write(data)
+        print(f"[SEGMENT {str(i+1)} DOWNLOADED]")
+    myfile.close()
+    print("[DOWNLOAD COMPLETED]")
+
+
+def sendFile(sock, msg):
+    path = msg[msg.index(" ")+1:] # " " works as separator
+    try:
+        myfile = open(path, "rb")
+        fileDim = os.stat(path).st_size
+        sock.send(str(fileDim).encode(FORMAT)) # Peer sends the dimension of file
+        time.sleep(1)
+        sock.send(myfile.read())
+        myfile.close()
+        time.sleep(10)
+        print("[FILE SENT]")
+    except:
+        print("[PATH NOT VALID]")
+
 
 def receiveFromPeer(sock, addr):
     global connectedToPeer
-    #data = sock.recv(1024).decode('utf-8')
-    #f = open("C:/Users/anton/Desktop/myfile.txt", "w")
-    #f.write(data)
-    #f.close()
     while connectedToPeer:
-        try:
-            msg = sock.recv(300000).decode(FORMAT) # 1024 is the length of the message
-        except:
-            msg = sock.recv(300000)
+        msg = sock.recv(SEGMENT_LENGTH).decode(FORMAT)
         if not msg: # If message is empty, disconnect the peer
             connectedToPeer = False
         elif SEND_FILE_MESSAGE in msg:
-            data = sock.recv(300000)
-            print(f"[{peerUsername} WANTS TO SEND YOU A FILE]")
-            filename = input("[INSERT FILE NAME] ")
-            path = input("[INSERT A VALID PATH] ")
-            try:
-                myfile = open(f"{path}/{filename}", "wb")
-                myfile.write(data)
-                myfile.close()
-                print("[FILE DOWNLOADED]")
-            except:
-                print("[INVALID PATH]")
+            lock.acquire()
+            getFile(sock)
+            lock.release()
         elif msg == DISCONN_MESSAGE:
             sock.send(DISCONN_MESSAGE.encode(FORMAT)) # To synchronize the disconnection between two nodes
             connectedToPeer = False
         else:
             print(peerUsername + ": " + msg)
-
-    print("\n" + peerUsername + " disconnected")
+    print(f"\n[{peerUsername} DISCONNECTED]")
 
 
 def sendToPeer(sock, addr):
     global connectedToPeer
-    #myfile = open("prova.txt", "rb")
-    #sock.send(myfile.read())
     while connectedToPeer:
         try:
             msg = input()
             sock.send(msg.encode(FORMAT))
             if SEND_FILE_MESSAGE in msg:
-                path = msg[msg.index(" ")+1:] # " " works as separator
-                print(path)
-                try:
-                    myfile = open(path, "rb")
-                    sock.send(myfile.read())
-                    myfile.close()
-                    print("FILE SENT")
-                except:
-                    print("[PATH NOT VALID]")
+                #lock.acquire()
+                sendFile(sock, msg)
+                #lock.release()
             elif msg == DISCONN_MESSAGE:
                 connectedToPeer = False
         except:
             connectedToPeer = False
-
     print("[DISCONNECTED]")
 
 
 def startHosting(guestAddr):
-    #metti messaggi introduttivi tipo 'tu sei l'host' e i vari messaggi per la disconnessione e per l'invio di file
     global connectedToPeer
+    print("[USE !DISCONNECT TO LEAVE THE CHAT]\n[USE !FILE *path* TO SEND A FILE]")
     node.listen()
     guestSocket, guestAddr = node.accept()
     if guestAddr == guestAddr:
@@ -112,7 +126,7 @@ def getMsg():
     global hostAddr, clientAddr, peerUsername # Non boolean global variables
     while connectedToServer:
         try:
-            msg = node.recv(1024).decode(FORMAT)
+            msg = node.recv(SEGMENT_LENGTH).decode(FORMAT)
             nodeDisconnection = True
             for i in range(len(serverMessages)):
                 if serverMessages[i] in msg:
@@ -125,7 +139,7 @@ def getMsg():
                     print(msg) 
                     peerUsername = msg[:msg.index(" STARTED")]
                     peerUsername = peerUsername[1:]
-                    hostAddr = node.recv(1024).decode(FORMAT) # So the target node gets the address of the host
+                    hostAddr = node.recv(SEGMENT_LENGTH).decode(FORMAT) # So the target node gets the address of the host
                     time.sleep(0.5)
                     node.send(DISCONN_MESSAGE.encode(FORMAT))
                     connectedToServer = False
@@ -178,7 +192,7 @@ def main():
                 node.send("LOGIN".encode(FORMAT))
             time.sleep(0.5)
             node.send(accountData.encode(FORMAT))
-            auth = node.recv(1024).decode(FORMAT)
+            auth = node.recv(SEGMENT_LENGTH).decode(FORMAT)
             if auth == "YES_AUTH":
                 print("[CONNECTED TO THE DISCOVERY SERVER]")
                 print("[WHEN ASKED FOR AN INPUT, ENTER THE NAME OF A USER TO CHAT WITH]")

@@ -13,6 +13,7 @@ DISCONN_MESSAGE = "!DISCONNECT"
 REPORT_MESSAGE = "!REPORT"
 MAX_REPORTS = 3
 SHUT_COUNTDOWN = 100
+SEGMENT_LENGTH = 1024 # Each segment has a length of 1 KB
 
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -34,9 +35,9 @@ def newNode():
         try:
             newUser = False
             node, addr = server.accept()
-            signOrLog = node.recv(1024).decode(FORMAT)
+            signOrLog = node.recv(SEGMENT_LENGTH).decode(FORMAT)
             time.sleep(0.5)
-            accountData = node.recv(1024).decode(FORMAT)
+            accountData = node.recv(SEGMENT_LENGTH).decode(FORMAT)
             separatorIndex = accountData.index("|")
             username = accountData[:separatorIndex]
             password = accountData[separatorIndex+1:]
@@ -96,7 +97,7 @@ def userBan(userReported):
 def nodeHandling(node, addr, username):
     while serverRunning:
         try:
-            msg = node.recv(1024).decode(FORMAT)
+            msg = node.recv(SEGMENT_LENGTH).decode(FORMAT)
             if msg == DISCONN_MESSAGE:
                 nodeDisconnection(node, addr, username)
                 break
