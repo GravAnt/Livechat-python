@@ -3,8 +3,10 @@ import threading
 import time
 import os
 
-DISCOV_SERVER = "localhost"
-DISCOV_PORT = 5050
+node = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+DISCOV_SERVER = "188.217.191.40"
+DISCOV_PORT = 5006
 DISCOV_ADDR = (DISCOV_SERVER, DISCOV_PORT)
 FORMAT = "utf-8"
 DISCONN_MESSAGE = "!DISCONNECT"
@@ -12,7 +14,6 @@ REPORT_MESSAGE = "!REPORT"
 SEND_FILE_MESSAGE = "!FILE"
 SEGMENT_LENGTH = 1024 # Each segment has a length of 1 KB
 
-node = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 connectedToServer = False
 connectedToPeer = False
 peersConnRequest = False
@@ -36,14 +37,14 @@ def getFile(sock):
     path = input("[INSERT A VALID PATH] ")
     try:
         myfile = open(f"{path}/{filename}", "wb")
+        for i in range(numSegments):
+            data = sock.recv(SEGMENT_LENGTH)
+            myfile.write(data)
+            print(f"[SEGMENT {str(i+1)} DOWNLOADED]")
+        myfile.close()
+        print("[DOWNLOAD COMPLETED]")
     except:
         print("[INVALID PATH]")
-    for i in range(numSegments):
-        data = sock.recv(SEGMENT_LENGTH)
-        myfile.write(data)
-        print(f"[SEGMENT {str(i+1)} DOWNLOADED]")
-    myfile.close()
-    print("[DOWNLOAD COMPLETED]")
 
 
 def sendFile(sock, msg):
@@ -55,7 +56,7 @@ def sendFile(sock, msg):
         time.sleep(1)
         sock.send(myfile.read())
         myfile.close()
-        time.sleep(10)
+        time.sleep(1)
         print("[FILE SENT]")
     except:
         print("[PATH NOT VALID]")
@@ -177,8 +178,11 @@ def setConn():
 
 
 def main():
-    global node, connectedToServer, peersConnRequest
+    global node, connectedToServer, peersConnRequest, myAddr
     try:
+        myPort = input("[ENTER PORT] ")
+        myAddr = (str(socket.gethostbyname(socket.gethostname())), int(myPort))
+        node.bind(myAddr)
         signUp = input("[ENTER 1 TO SIGN UP, ANY OTHER KEY TO LOGIN] ") 
         username = input("[ENTER USERNAME] ")
         password = input("[ENTER PASSWORD] ")

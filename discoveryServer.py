@@ -5,8 +5,8 @@ import account
 import connDB
 import bcrypt
 
-PORT = 5050
-SERVER = "localhost"
+PORT = 5006
+SERVER = "192.168.1.2"
 ADDR = (SERVER, PORT)
 FORMAT = "utf-8"
 DISCONN_MESSAGE = "!DISCONNECT"
@@ -14,7 +14,6 @@ REPORT_MESSAGE = "!REPORT"
 MAX_REPORTS = 3
 SHUT_COUNTDOWN = 100
 SEGMENT_LENGTH = 1024 # Each segment has a length of 1 KB
-
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDR)
