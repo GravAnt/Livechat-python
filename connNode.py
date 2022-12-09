@@ -180,8 +180,12 @@ def setConn():
 def main():
     global node, connectedToServer, peersConnRequest, myAddr
     try:
+        myPrivateIP = input("[ENTER YOUR PRIVATE IP OR ENTER 0 TO GET THE IP AUTOMATICALLY (IT DOESN'T WORK ON ALL MACHINES)] ")
         myPort = input("[ENTER PORT] ")
-        myAddr = (str(socket.gethostbyname(socket.gethostname())), int(myPort))
+        if myPrivateIP == 0:
+            myPrivateIP = str(socket.gethostbyname(socket.gethostname))
+        myAddr = (myPrivateIP, int(myPort))
+        print(myAddr)
         node.bind(myAddr)
         signUp = input("[ENTER 1 TO SIGN UP, ANY OTHER KEY TO LOGIN] ") 
         username = input("[ENTER USERNAME] ")
@@ -189,7 +193,9 @@ def main():
         accountData = username + "|" + password
         mainLoop = True
         while mainLoop:
+            print("Line 192")
             node.connect(DISCOV_ADDR)
+            print("Line 194")
             if signUp == '1':
                 node.send("SIGNUP".encode(FORMAT))
             else:
