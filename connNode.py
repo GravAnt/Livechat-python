@@ -112,8 +112,8 @@ def startHosting(guestAddr):
 
 
 def connectToHost(hostAddr):
-    #metti messaggi introduttivi tipo 'tu sei il guest' e i vari messaggi per la disconnessione e per l'invio di file
     global connectedToPeer
+    print("[USE !DISCONNECT TO LEAVE THE CHAT]\n[USE !FILE *path* TO SEND A FILE]")
     try:
         node.connect(eval(hostAddr))
         print("[CONNECTED TO THE USER]")
@@ -145,9 +145,10 @@ def getMsg():
                     node.send(DISCONN_MESSAGE.encode(FORMAT))
                     connectedToServer = False
                     peersConnRequest = True
-                elif "BAN_MSG" in msg:
-                    node.close()
+                elif "BAN MSG" in msg:
                     print("[YOU CAN NO LONGER USE YOUR ACCOUNT]")
+                    connectedToServer = False
+                elif "DISCONNECTED" in msg:
                     connectedToServer = False
                 else:
                     node.send(DISCONN_MESSAGE.encode(FORMAT))
@@ -182,8 +183,8 @@ def main():
     try:
         myPrivateIP = input("[ENTER YOUR PRIVATE IP OR ENTER 0 TO GET THE IP AUTOMATICALLY (IT DOESN'T WORK ON ALL MACHINES)] ")
         myPort = input("[ENTER PORT] ")
-        if myPrivateIP == 0:
-            myPrivateIP = str(socket.gethostbyname(socket.gethostname))
+        if myPrivateIP == "0":
+            myPrivateIP = str(socket.gethostbyname(socket.gethostname()))
         myAddr = (myPrivateIP, int(myPort))
         node.bind(myAddr)
         signUp = input("[ENTER 1 TO SIGN UP, ANY OTHER KEY TO LOGIN] ") 

@@ -77,6 +77,7 @@ def nodeDisconnection(node, addr, username):
     clients.remove(node)
     sockets.pop(addr)
     clientDisconnection = "[NEW DISCONNECTION] " + users.pop(addr)
+    node.send("[DISCONNECTED]".encode(FORMAT))
     node.close()
     for c in clients: # Notifying the other nodes about the disconnection
         c.sendall(str(clientDisconnection).encode(FORMAT))
@@ -86,7 +87,8 @@ def userBan(userReported):
     for address, username in users.items():
         if userReported == username:
             node = sockets[address]
-            node.send("BAN_MSG".encode(FORMAT))
+            node.send("BAN MSG".encode(FORMAT))
+            node.close()
             print(f"[NEW BAN] {address}")
             for c in clients:
                     c.sendall(f"[{userReported} BANNED]".encode(FORMAT))
