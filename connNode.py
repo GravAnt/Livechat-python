@@ -5,7 +5,7 @@ import os
 
 node = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-DISCOV_SERVER = "X.X.X.X"
+DISCOV_SERVER = "188.217.191.250"
 DISCOV_PORT = 5006
 DISCOV_ADDR = (DISCOV_SERVER, DISCOV_PORT)
 FORMAT = "utf-8"
@@ -28,7 +28,6 @@ lock = threading.Lock()
 
 
 def getFile(sock):
-    #"C:/Users/anton/Desktop/myfile.txt"
     fileDimension = int(sock.recv(SEGMENT_LENGTH).decode(FORMAT)) # Get file dimension in bytes
     numSegments = int(fileDimension/SEGMENT_LENGTH)+1
     print(f"[{peerUsername} WANTS TO SEND YOU A FILE]\n[PRESS ENTER TO CONTINUE]")
