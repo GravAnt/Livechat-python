@@ -6,7 +6,7 @@ import connDB
 import bcrypt
 
 PORT = 5006
-SERVER = "192.168.1.2"
+SERVER = "X.X.X.X"
 ADDR = (SERVER, PORT)
 FORMAT = "utf-8"
 DISCONN_MESSAGE = "!DISCONNECT"
