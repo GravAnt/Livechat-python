@@ -5,9 +5,9 @@ import account
 import connDB
 import bcrypt
 
-PORT = 5006
-SERVER = "X.X.X.X"
-ADDR = (SERVER, PORT)
+DISCOV_SERVER = "X.X.X.X" # Private IP
+DISCOV_PORT = 5006
+DISCOV_ADDR = (DISCOV_SERVER, DISCOV_PORT)
 FORMAT = "utf-8"
 DISCONN_MESSAGE = "!DISCONNECT"
 REPORT_MESSAGE = "!REPORT"
@@ -16,7 +16,7 @@ SHUT_COUNTDOWN = 100
 SEGMENT_LENGTH = 1024 # Each segment has a length of 1 KB
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind(ADDR)
+server.bind(DISCOV_ADDR)
 
 serverRunning = True
 clients = set() # To keep track of all the clients connected
