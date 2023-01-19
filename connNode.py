@@ -5,7 +5,7 @@ import os
 
 node = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-DISCOV_SERVER = "188.217.191.250"
+DISCOV_SERVER = "X.X.X.X"
 DISCOV_PORT = 5006
 DISCOV_ADDR = (DISCOV_SERVER, DISCOV_PORT)
 FORMAT = "utf-8"
